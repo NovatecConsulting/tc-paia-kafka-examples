@@ -1,0 +1,54 @@
+#############################################################
+# KRaft Single Mode                                         #
+# 1x broker,controller                                      #
+#############################################################
+#https://github.com/apache/kafka/blob/2.8.0/config/kraft/README.md
+---
+version: '2.4'
+services:
+
+  kafka:
+    image: ueisele/apache-kafka-server:2.8.0
+    restart: always
+    network_mode: host
+    volumes:
+      - kafka-server-1:/opt/apache/kafka/data
+    environment:
+      #### Setup ####
+      AUTO_GENERATE_CLUSTER_ID: "true" # (default: false) In KRaft mode the cluster id must be generated manually. If set to true the id is automatically generated during the first start. This should only be used in single mode.
+      AUTO_FORMAT_KAFKA_STORAGE_DIR: "true" # (default: false) In KRaft mode also the storage dir must be formatted manually before the node is started the first time. If set to true, the directory is formatted if it is not formatted until now. However, be careful with this setting, could lead to data loss.
+      #### Server Basics ####
+      KAFKA_PROCESS_ROLES: broker,controller # (default: "") Defines in which mode the server runs and which roles it has. Valid values are 'broker', 'controller' 'broker,controller' and ''. If empty the server runs in ZooKeeper mode.
+      KAFKA_NODE_ID: 1 # (default: -1, required in KRaft mode) The node id for this server.
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093 # (required in KRaft mode) The connect string for the controller quorum
+      #### Socket Server Settings ###
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093 # (by default derived from advertised listeners) List of URIs we will listen on and the listener names. In this case, Kafka listens in both ports on all interfaces.
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://127.0.0.1:9092 # (required) Describes how the host name that is advertised and can be reached by clients. HOST://localhost:19092 enables access from Docker host.
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER # (default: required in KRaft mode) A comma-separated list of the names of the listeners used by the controller.
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,SSL:SSL,SASL_PLAINTEXT:SASL_PLAINTEXT,SASL_SSL:SASL_SSL # (default: PLAINTEXT:PLAINTEXT,...) Map between listener names and security protocols. In this scenario this setting is used to define listeners with names.
+      #### Internal Topic Settings ####
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1 # (default: 3) The replication factor for the offsets topic. Must be 1, because we only have a single broker.
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1 # (default: 3) The replication factor for the transaction topic. Must be 1, because we only have a single broker.
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1 # (default: 2) Overridden min.insync.replicas config for the transaction topic. Must be 1, because we only have a single broker.
+      #### Advanced Request Logging ####
+      # KAFKA_LOG4J_LOGGERS: kafka.server.KafkaApis=TRACE
+
+  #############################################################
+  # Confluent Schema Registry (CP)                            #
+  #############################################################
+  schema-registry:
+    image: confluentinc/cp-schema-registry:6.2.0
+    restart: always
+    network_mode: host
+    # https://docs.confluent.io/current/schema-registry/installation/config.html
+    # https://docs.confluent.io/current/installation/docker/config-reference.html#schema-registry-configuration
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry # (required) The advertised host name. Not reuqired in single host mode, but required by the image.
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081 # (default: http://0.0.0.0:8081) Comma-separated list of listeners that listen for API requests
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: localhost:9092 # (required) A list of Kafka brokers to connect. If kafkastore.connection.url is not specified, the Kafka cluster containing these bootstrap servers is used both to coordinate Schema Registry instances (primary election) and to store schema data.
+      SCHEMA_REGISTRY_CUB_KAFKA_TIMEOUT: 60 # (default: 40) Docker image setting, which specifies the amount of time to wait for Kafka. Could be used, to get rid of Docker healthchecks.
+      SCHEMA_REGISTRY_KAFKASTORE_TOPIC_REPLICATION_FACTOR: 1 # (default: 3) The desired replication factor of the schema topic. Must be 1, because we only have a single broker.
+      SCHEMA_REGISTRY_AVRO_COMPATIBILITY_LEVEL: backward # (default: backward) The Avro compatibility type.
+
+volumes:
+  kafka-server-1:

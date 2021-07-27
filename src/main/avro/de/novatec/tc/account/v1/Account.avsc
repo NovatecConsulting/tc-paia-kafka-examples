@@ -1,0 +1,15 @@
+{
+  "namespace": "de.novatec.tc.account.v1",
+  "name": "Account",
+  "type": "record",
+  "fields": [
+    {
+      "name": "accountId",
+      "type": "string"
+    },
+    {
+      "name": "accountName",
+      "type": "string"
+    }
+  ]
+}

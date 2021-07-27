@@ -1,0 +1,27 @@
+{
+  "namespace": "de.novatec.tc.account.v1",
+  "name": "ActionEvent",
+  "type": "record",
+  "fields": [
+    {
+      "name" : "eventId",
+      "type": {"type": "string", "logicalType": "uuid"}
+    },
+    {
+      "name": "eventTime",
+      "type": {"type": "long", "logicalType": "timestamp-micros"}
+    },
+    {
+      "name": "accountId",
+      "type": "string"
+    },
+    {
+      "name": "accountName",
+      "type": "string"
+    },
+    {
+      "name": "action",
+      "type": "string"
+    }
+  ]
+}

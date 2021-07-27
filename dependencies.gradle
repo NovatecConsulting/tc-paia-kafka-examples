@@ -1,0 +1,31 @@
+ext {
+    versions = [:]
+    libs = [:]
+}
+
+versions += [
+    kafka: "2.8.0",
+    confluent: "6.2.0",
+    avro: "1.10.2",
+    commonsLang: "3.12.0",
+    slf4j: "1.7.32",
+    log4j: "1.2.17",
+    junit: "5.7.2"
+]
+
+libs += [
+    kafkaClients: "org.apache.kafka:kafka-clients:${versions.kafka}",
+    kafkaStreams: "org.apache.kafka:kafka-streams:${versions.kafka}",
+    kafkaStreamsAvroSerde: "io.confluent:kafka-streams-avro-serde:${versions.confluent}",
+    kafkaAvroSerializer: "io.confluent:kafka-avro-serializer:${versions.confluent}",
+    avro: "org.apache.avro:avro:${versions.avro}",
+    commonsLang: "org.apache.commons:commons-lang3:${versions.commonsLang}",
+    slf4jApi: "org.slf4j:slf4j-api:${versions.slf4j}",
+
+    junitApi: "org.junit.jupiter:junit-jupiter-api:${versions.junit}",
+    junitEngine: "org.junit.jupiter:junit-jupiter-engine:${versions.junit}",
+    kafkaClients_test: "org.apache.kafka:kafka-clients:${versions.kafka}:test",
+    kafkaStreams_test: "org.apache.kafka:kafka-streams-test-utils:${versions.kafka}",
+    slf4jlog4j: "org.slf4j:slf4j-log4j12:${versions.slf4j}",
+    log4j: "log4j:log4j:${versions.log4j}"
+]

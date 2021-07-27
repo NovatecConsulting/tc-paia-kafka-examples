@@ -1,0 +1,63 @@
+import java.nio.charset.StandardCharsets
+
+plugins {
+    id 'java'
+    id 'com.github.davidmc24.gradle.plugin.avro' version '1.2.1'
+    id 'com.github.johnrengelman.shadow' version '7.0.0'
+}
+
+apply from: "$rootDir/dependencies.gradle"
+
+group 'de.novatec.tc'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'https://packages.confluent.io/maven/'
+    }
+}
+
+ext {
+    minJavaVersion = "11"
+}
+
+dependencies {
+    implementation libs.kafkaStreams
+    implementation libs.kafkaStreamsAvroSerde
+    implementation libs.avro
+    implementation libs.commonsLang
+
+    runtimeOnly libs.slf4jlog4j
+
+    testImplementation libs.junitApi
+    testRuntimeOnly libs.junitEngine
+}
+
+configurations.all {
+    resolutionStrategy {
+        // required because avro serde includes Confluent Kafka
+        force libs.kafkaClients
+    }
+}
+
+sourceCompatibility = minJavaVersion
+targetCompatibility = minJavaVersion
+
+tasks.withType(JavaCompile) {
+    options.encoding = StandardCharsets.UTF_8
+}
+
+avro {
+    fieldVisibility = "PRIVATE"
+    outputCharacterEncoding = StandardCharsets.UTF_8
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        outputs.upToDateWhen { false }
+        showStandardStreams = true
+        exceptionFormat = "full"
+    }
+}
