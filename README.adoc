@@ -127,3 +127,8 @@ accountC	{"accountId":"5f3ce651-4f07-4670-9bf7-26c18a038a96","accountName":"dNqC
 accountB	{"accountId":"1cf03214-2825-4f4c-93ac-7d3e742921eb","accountName":"FSnoZ"}
 accountA	{"accountId":"8cce533d-b14a-48c7-ae55-b4ab2b07cf10","accountName":"lwUhAZEar"}
 ----
+
+== Open Topics
+
+* Analyse "Smooth scaling for Kafka Streams" Features (https://cwiki.apache.org/confluence/display/KAFKA/KIP-441%3A+Smooth+Scaling+Out+for+Kafka+Streams)
+* Analyse Rebalancing Strategies for KafkaStreams and also Kafka Client APIs

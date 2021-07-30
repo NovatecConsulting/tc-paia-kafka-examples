@@ -27,6 +27,8 @@ dependencies {
     implementation libs.kafkaStreamsAvroSerde
     implementation libs.avro
     implementation libs.commonsLang
+    implementation libs.argparse4j
+    implementation libs.awaitility
 
     runtimeOnly libs.slf4jlog4j
 
