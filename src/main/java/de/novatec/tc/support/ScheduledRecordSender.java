@@ -64,7 +64,7 @@ public class ScheduledRecordSender implements AutoCloseable {
 
     private void initSupervision() {
         executor.scheduleAtFixedRate(() -> {
-            for (Pair<RunnableSender<?, ?>, ScheduledFuture<?>> pair : scheduled) {
+            for (final Pair<RunnableSender<?, ?>, ScheduledFuture<?>> pair : scheduled) {
                 if (pair.getKey().isCompleted() && !pair.getValue().isCancelled()) {
                     pair.getValue().cancel(false);
                 }
@@ -85,10 +85,10 @@ public class ScheduledRecordSender implements AutoCloseable {
             final Serializer<V> valueSerializer,
             final Duration period) {
         ensureReady();
-        Map<String, Object> actualConfig = new HashMap<>(configs);
+        final Map<String, Object> actualConfig = new HashMap<>(configs);
         actualConfig.put(MAX_BLOCK_MS_CONFIG, (int) period.toMillis());
-        RunnableSender<K, V> runnableSender = new RunnableSender<>(actualConfig, keySerializer, valueSerializer, maxFailedSends, recordSupplier);
-        ScheduledFuture<?> scheduledFuture = executor.scheduleAtFixedRate(runnableSender, 0, period.toMillis(), MILLISECONDS);
+        final RunnableSender<K, V> runnableSender = new RunnableSender<>(actualConfig, keySerializer, valueSerializer, maxFailedSends, recordSupplier);
+        final ScheduledFuture<?> scheduledFuture = executor.scheduleAtFixedRate(runnableSender, 0, period.toMillis(), MILLISECONDS);
         scheduled.add(Pair.of(runnableSender, scheduledFuture));
         return runnableSender;
     }
@@ -99,10 +99,10 @@ public class ScheduledRecordSender implements AutoCloseable {
             final Class<VS> valueSerializer,
             final Duration period) {
         ensureReady();
-        Map<String, Object> actualConfig = new HashMap<>(configs);
+        final Map<String, Object> actualConfig = new HashMap<>(configs);
         actualConfig.put(MAX_BLOCK_MS_CONFIG, (int) period.toMillis());
-        RunnableSender<K, V> runnableSender = new RunnableSender<>(actualConfig, keySerializer, valueSerializer, maxFailedSends, recordSupplier);
-        ScheduledFuture<?> scheduledFuture = executor.scheduleAtFixedRate(runnableSender, 0, period.toMillis(), MILLISECONDS);
+        final RunnableSender<K, V> runnableSender = new RunnableSender<>(actualConfig, keySerializer, valueSerializer, maxFailedSends, recordSupplier);
+        final ScheduledFuture<?> scheduledFuture = executor.scheduleAtFixedRate(runnableSender, 0, period.toMillis(), MILLISECONDS);
         scheduled.add(Pair.of(runnableSender, scheduledFuture));
         return runnableSender;
     }
@@ -117,10 +117,10 @@ public class ScheduledRecordSender implements AutoCloseable {
     }
 
     public void close(Duration timeout) {
-        long startMs = System.currentTimeMillis();
+        final long startMs = System.currentTimeMillis();
 
         scheduled.forEach(p -> p.getKey().stop());
-        for (Pair<RunnableSender<?, ?>, ?> pair : scheduled) {
+        for (final Pair<RunnableSender<?, ?>, ?> pair : scheduled) {
             final Duration remainingTimeout = timeout.minus(Duration.ofMillis(System.currentTimeMillis() - startMs));
             closeQuietly(() -> pair.getKey().awaitCompletion(remainingTimeout.compareTo(Duration.ZERO) >= 0 ? remainingTimeout : Duration.ZERO), pair.getKey().getClass().getSimpleName());
         }
@@ -130,7 +130,7 @@ public class ScheduledRecordSender implements AutoCloseable {
             if(!executor.awaitTermination(timeout.toMillis(), MILLISECONDS)) {
                 LOG.info("Could not shutdown executor within given timeout.");
             }
-        } catch (InterruptedException e) {
+        } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
             LOG.info("Interrupted during awaiting executor shutdown", e);
         }
@@ -184,9 +184,9 @@ public class ScheduledRecordSender implements AutoCloseable {
         }
 
         private static  Map<String, Object> withSerializer(final Map<String, ?> configs,
-                                                          final Class<? extends  Serializer<?>> keySerializer,
-                                                          Class<? extends  Serializer<?>> valueSerializer) {
-            Map<String, Object> actualConfig = new HashMap<>(configs);
+                                                           final Class<? extends  Serializer<?>> keySerializer,
+                                                           final Class<? extends  Serializer<?>> valueSerializer) {
+            final Map<String, Object> actualConfig = new HashMap<>(configs);
             actualConfig.put(KEY_SERIALIZER_CLASS_CONFIG, keySerializer);
             actualConfig.put(VALUE_SERIALIZER_CLASS_CONFIG, valueSerializer);
             return actualConfig;
@@ -201,8 +201,8 @@ public class ScheduledRecordSender implements AutoCloseable {
         }
 
         RunnableSender(final Producer<K, V> producer,
-                              final int maxFailedSends,
-                              final Supplier<ProducerRecord<K, V>> recordSupplier) {
+                       final int maxFailedSends,
+                       final Supplier<ProducerRecord<K, V>> recordSupplier) {
             this.producer = producer;
             this.maxFailedSends = maxFailedSends;
             this.recordSupplier = recordSupplier;
@@ -263,9 +263,9 @@ public class ScheduledRecordSender implements AutoCloseable {
         @Override
         public int lastConsecutiveFailedSends() {
             int numFailed = 0;
-            Iterator<ProduceCompletion> it = produces.descendingIterator();
+            final Iterator<ProduceCompletion> it = produces.descendingIterator();
             while(it.hasNext()) {
-                ProduceCompletion produceResult = it.next();
+                final ProduceCompletion produceResult = it.next();
                 if (produceResult.isDone()) {
                     if (produceResult.isFailed()) {
                         numFailed++;
@@ -293,7 +293,7 @@ public class ScheduledRecordSender implements AutoCloseable {
         }
 
         @Override
-        public boolean awaitCompletion(Duration timeout) throws InterruptedException {
+        public boolean awaitCompletion(final Duration timeout) throws InterruptedException {
             return completionLatch.await(timeout.toMillis(), MILLISECONDS);
         }
 
@@ -328,7 +328,7 @@ public class ScheduledRecordSender implements AutoCloseable {
         private final AtomicReference<ResultHolder> result = new AtomicReference<>();
 
         @Override
-        public void onCompletion(RecordMetadata metadata, Exception exception) {
+        public void onCompletion(final RecordMetadata metadata, final Exception exception) {
             this.result.set(new ResultHolder(metadata, exception));
             if (exception == null) {
                 if (LOG.isDebugEnabled())
@@ -339,7 +339,7 @@ public class ScheduledRecordSender implements AutoCloseable {
             }
         }
 
-        public void fail(Exception e) {
+        public void fail(final Exception e) {
             result.set(new ResultHolder(null, e));
         }
 

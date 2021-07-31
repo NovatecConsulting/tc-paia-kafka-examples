@@ -2,10 +2,7 @@ package de.novatec.tc.pseudonymize;
 
 import de.novatec.tc.account.v1.Account;
 import de.novatec.tc.account.v1.ActionEvent;
-import de.novatec.tc.support.AppConfigs;
-import de.novatec.tc.support.Configs;
-import de.novatec.tc.support.TopicsSupport;
-import de.novatec.tc.support.TypedStoreRef;
+import de.novatec.tc.support.*;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -14,7 +11,6 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.processor.ProcessorContext;
@@ -22,58 +18,78 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 
+import static de.novatec.tc.support.AppConfigs.asProperties;
+import static de.novatec.tc.support.FileSupport.cleanUpHook;
+import static de.novatec.tc.support.FileSupport.tempDirectory;
 import static java.util.UUID.randomUUID;
 import static org.apache.commons.lang3.RandomStringUtils.randomAlphabetic;
+import static org.apache.kafka.streams.StreamsConfig.STATE_DIR_CONFIG;
 import static org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler.StreamThreadExceptionResponse.SHUTDOWN_CLIENT;
 import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 import static org.apache.kafka.streams.state.Stores.persistentKeyValueStore;
 
 public class PseudonymizeApp {
 
-    public static void main(String[] args) {
-        Map<String, ?> configs = Configs.combined(
+    public static void main(final String[] args) {
+        final Map<String, Object> configs = Configs.combined(
                 Configs.fromResource("pseudonymize.properties"),
                 Configs.fromEnv("APP_"),
                 Configs.fromArgs(PseudonymizeApp.class.getSimpleName(), args));
 
-        AppConfigs appConfigs = new AppConfigs(configs);
-        new TopicsSupport(appConfigs.asMap())
-            .createTopicsIfNotExists(appConfigs.topics(), Duration.ofSeconds(5));
+        new PseudonymizeApp().runApp(configs);
+    }
 
-        final Serde<String> stringSerde = Serdes.String();
-        final Serde<ActionEvent> actionEventSerde = new SpecificAvroSerde<>();
-        actionEventSerde.configure(appConfigs.asMap(), false);
-        final Serde<Account> accountSerde = new SpecificAvroSerde<>();
-        accountSerde.configure(appConfigs.asMap(), false);
+    public void runApp(final Map<String, ?> configs) {
+        new TopicSupport(configs)
+                .createTopicsIfNotExists(AppConfigs.of(configs).topics(), Duration.ofSeconds(5));
 
-        StreamsBuilder builder = new StreamsBuilder();
-        KStream<String, ActionEvent> actionEvents = builder.stream(appConfigs.topicName("input"),
-                Consumed.with(stringSerde, actionEventSerde));
+        final Map<String, Object> actualConfigs = new HashMap<>(configs);
+        final CountDownLatch cleanUpMonitor = new CountDownLatch(1);
+        actualConfigs.computeIfAbsent(STATE_DIR_CONFIG,
+                key -> cleanUpHook(tempDirectory("kafka-streams"), cleanUpMonitor::await, Duration.ofSeconds(10)).getPath());
 
-        StoreBuilder<KeyValueStore<String, Account>> pseudonymStoreBuilder =
-                keyValueStoreBuilder(persistentKeyValueStore("pseudonym-store"), stringSerde, accountSerde);
-        builder.addStateStore(pseudonymStoreBuilder);
-
-        KStream<String, ActionEvent> pseudonymizedEvents =
-                actionEvents.transform(() -> new PseudonymizeTransformer(TypedStoreRef.fromBuilder(pseudonymStoreBuilder)), pseudonymStoreBuilder.name());
-
-        pseudonymizedEvents.to(appConfigs.topicName("output"), Produced.with(stringSerde, actionEventSerde));
-
-        Topology topology = builder.build();
-        KafkaStreams streams = new KafkaStreams(topology, appConfigs.asProperties());
-        // https://kafka-tutorials.confluent.io/error-handling/kstreams.html
+        final KafkaStreams streams = new KafkaStreams(buildTopology(actualConfigs), asProperties(actualConfigs));
         streams.setUncaughtExceptionHandler((exception) -> SHUTDOWN_CLIENT);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            streams.close(Duration.ofSeconds(10));
+            cleanUpMonitor.countDown();
+        }, "streams-shutdown-hook"));
 
-        try {
-            streams.start();
-        } catch (final Throwable e) {
-            e.printStackTrace();
-            System.exit(1);
-        }
+        streams.start();
+    }
+
+    public Topology buildTopology(final Map<String, ?> configs) {
+        final SerdeBuilder<String> stringSerdeBuilder = SerdeBuilder.fromSerdeSupplier(Serdes.StringSerde::new);
+        final SerdeBuilder<ActionEvent> actionEventSerdeBuilder = SerdeBuilder.fromSerdeSupplier(SpecificAvroSerde::new);
+        final SerdeBuilder<Account> accountSerdeBuilder = SerdeBuilder.fromSerdeSupplier(SpecificAvroSerde::new);
+        return buildTopology(configs, stringSerdeBuilder, actionEventSerdeBuilder, accountSerdeBuilder);
+    }
+
+    public Topology buildTopology(final Map<String, ?> configs,
+                                  final SerdeBuilder<String> stingSerdeBuilder,
+                                  final SerdeBuilder<ActionEvent> actionEventSerdeBuilder,
+                                  final SerdeBuilder<Account> accountSerdeBuilder) {
+        final Serde<String> stringSerde = stingSerdeBuilder.build(configs, true);
+        final Serde<ActionEvent> actionEventSerde = actionEventSerdeBuilder.build(configs, false);
+        final Serde<Account> accountSerde = accountSerdeBuilder.build(configs, false);
+
+        final AppConfigs appConfigs = new AppConfigs(configs);
+        final StreamsBuilder builder = new StreamsBuilder();
+
+        final StoreBuilder<KeyValueStore<String, Account>> pseudonymStoreBuilder =
+                keyValueStoreBuilder(persistentKeyValueStore(appConfigs.storeName("pseudonym")), stringSerde, accountSerde);
+        builder.addStateStore(pseudonymStoreBuilder);
+
+        builder.stream(appConfigs.topicName("input"), Consumed.with(stringSerde, actionEventSerde))
+            .transform(() -> new PseudonymizeTransformer(TypedStoreRef.fromBuilder(pseudonymStoreBuilder)), pseudonymStoreBuilder.name())
+            .to(appConfigs.topicName("output"), Produced.with(stringSerde, actionEventSerde));
+
+        return builder.build();
     }
 
     public static class PseudonymizeTransformer implements Transformer<String, ActionEvent, KeyValue<String, ActionEvent>> {
@@ -89,7 +105,7 @@ public class PseudonymizeApp {
         @Override
         public void init(final ProcessorContext context) {
             // KafkaStreams creates a StateStore for each Task.
-            // Therefore the actual StateStore must be retrieved from the context.
+            // Therefore, the actual StateStore must be retrieved from the context.
             // The TypedStoreRef basically wraps the following action:
             //   pseudonymStore = context.getStateStore(pseudonymStoreName);
             pseudonymStore = pseudonymStoreRef.getStateStore(context);

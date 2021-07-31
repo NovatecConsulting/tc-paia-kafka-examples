@@ -13,47 +13,47 @@ import java.util.Properties;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
 
-public interface Configs {
+public final class Configs {
+
+    private Configs() {}
 
     @SafeVarargs
-    static Map<String, Object> combined(Map<String, ?>... configs) {
-        Map<String, Object> combined = new HashMap<>();
-        for (Map<String, ?> config : configs) {
+    public static Map<String, Object> combined(final Map<String, ?>... configs) {
+        final Map<String, Object> combined = new HashMap<>();
+        for (final Map<String, ?> config : configs) {
             combined.putAll(config);
         }
         return combined;
     }
 
-    static Map<String, Object> fromResource(String resourceName) {
+    public static Map<String, Object> fromResource(final String resourceName) {
         return fromURL(requireNonNull(AppConfigs.class.getClassLoader().getResource(resourceName)));
     }
 
-    static Map<String, Object> fromURL(URL url) {
-        Properties allProps = new Properties();
-        try(InputStream input = url.openStream()) {
+    public static Map<String, Object> fromURL(final URL url) {
+        final Properties allProps = new Properties();
+        try(final InputStream input = url.openStream()) {
             allProps.load(input);
-        } catch (IOException e) {
+        } catch (final IOException e) {
             throw new ConfigException(e.getMessage(), e);
         }
         return asMap(allProps);
     }
 
-    static Map<String, Object> fromEnv(String prefix) {
+    public static Map<String, Object> fromEnv(final String prefix) {
         return System.getenv().entrySet().stream()
                 .filter(env -> env.getKey().startsWith(prefix))
                 .map(env -> Pair.of(env.getKey().toLowerCase().replace("_","."), env.getValue()))
                 .collect(toMap(Pair::getKey, Pair::getValue));
     }
 
-    static Map<String, Object> fromArgs(String name, String[] args) {
+    public static Map<String, Object> fromArgs(final String name, final String[] args) {
         return new CliConfigProvider(name, args).get();
     }
 
-    private static Map<String, Object> asMap(Properties properties) {
-        Map<String, Object> map = new HashMap<>();
-        for (Map.Entry<Object, Object> entry : properties.entrySet()) {
-            map.put(String.valueOf(entry.getKey()), entry.getValue());
-        }
-        return map;
+    private static Map<String, Object> asMap(final Properties properties) {
+        return properties.entrySet().stream()
+                .map(e -> Pair.of(String.valueOf(e.getKey()), e.getValue()))
+                .collect(toMap(Pair::getKey, Pair::getValue));
     }
 }

@@ -118,7 +118,7 @@ kafka-avro-console-consumer \
   --property print.key=true \
   --key-deserializer org.apache.kafka.common.serialization.StringDeserializer \
   --from-beginning \
-  --topic pseudonymize-pseudonym-store-changelog
+  --topic pseudonymize-pseudonym-changelog
 ----
 
 .Example output

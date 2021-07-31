@@ -22,17 +22,17 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toSet;
 import static org.awaitility.Awaitility.await;
 
-public class TopicsSupport {
+public class TopicSupport {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TopicsSupport.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TopicSupport.class);
 
     private final Map<String, Object> configs;
 
-    public TopicsSupport(final Map<String, ?> configs) {
+    public TopicSupport(final Map<String, ?> configs) {
         this.configs = new HashMap<>(configs);
     }
 
-    public TopicsSupport createTopicsIfNotExists(final Set<NewTopic> topics, final Duration timeout) throws TimeoutException {
+    public TopicSupport createTopicsIfNotExists(final Set<NewTopic> topics, final Duration timeout) throws TimeoutException {
         try (final AdminClient client = AdminClient.create(configs)) {
             getResult(client.createTopics(topics, new CreateTopicsOptions().timeoutMs((int) timeout.toMillis())).all(), timeout);
         } catch (final TopicExistsException e) {
@@ -44,18 +44,18 @@ public class TopicsSupport {
         return this;
     }
 
-    public TopicsSupport waitUntilTopicsExist(final Set<String> topics, final Duration timeout) throws TimeoutException {
+    public TopicSupport waitUntilTopicsExist(final Set<String> topics, final Duration timeout) throws TimeoutException {
         try (final AdminClient client = AdminClient.create(configs)) {
             await()
                 .timeout(timeout)
-                .until(() -> topicExists(client, topics, timeout));
+                .until(() -> topicsExists(client, topics, timeout));
         } catch (ConditionTimeoutException e) {
             throw new TimeoutException(e.getMessage(), e);
         }
         return this;
     }
 
-    private boolean topicExists(final AdminClient client, final Set<String> topics, final Duration timeout) throws TimeoutException, InterruptedException {
+    private boolean topicsExists(final AdminClient client, final Set<String> topics, final Duration timeout) throws TimeoutException, InterruptedException {
         final Set<String> actualTopics =
                 getResult(client.listTopics(new ListTopicsOptions().timeoutMs((int) timeout.toMillis())).names(), timeout);
         return actualTopics.containsAll(topics);
@@ -70,7 +70,7 @@ public class TopicsSupport {
             } else {
                 throw new KafkaException(e.getCause().getMessage(), e.getCause());
             }
-        } catch (java.util.concurrent.TimeoutException e) {
+        } catch (final java.util.concurrent.TimeoutException e) {
             throw new TimeoutException(e.getMessage(), e);
         }
     }

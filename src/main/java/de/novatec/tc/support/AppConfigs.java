@@ -1,5 +1,6 @@
 package de.novatec.tc.support;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.kafka.clients.admin.NewTopic;
 
 import java.util.*;
@@ -8,8 +9,8 @@ import java.util.regex.Pattern;
 
 import static java.lang.String.format;
 import static java.util.Arrays.stream;
-import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 public class AppConfigs {
@@ -18,18 +19,28 @@ public class AppConfigs {
 
     private final Map<String, ?> configs;
 
-    public AppConfigs(Map<String, ?> configs) {
-        this.configs = requireNonNull(configs);
+    public AppConfigs(final Properties properties) {
+        this(asMap(properties));
     }
 
-    public AppConfigs newWithProperty(String key, Object value) {
-        Map<String, Object> newConfigs = new HashMap<>(configs);
-        newConfigs.put(key, value);
-        return new AppConfigs(newConfigs);
+    public AppConfigs(final Map<String, ?> configs) {
+        this.configs = new HashMap<>(configs);
+    }
+
+    public static AppConfigs of(final Properties properties) {
+        return new AppConfigs(properties);
+    }
+
+    public static AppConfigs of(final Map<String, ?> configs) {
+        return new AppConfigs(configs);
     }
 
     public Properties asProperties() {
-        Properties properties = new Properties();
+        return asProperties(configs);
+    }
+
+    public static Properties asProperties(final Map<String, ?> configs) {
+        final Properties properties = new Properties();
         properties.putAll(configs);
         return properties;
     }
@@ -38,50 +49,60 @@ public class AppConfigs {
         return new HashMap<>(configs);
     }
 
-    public String topicName(String configName) {
+    public static Map<String, Object> asMap(final Properties properties) {
+        return properties.entrySet().stream()
+                .map(e -> Pair.of(String.valueOf(e.getKey()), e.getValue()))
+                .collect(toMap(Pair::getKey, Pair::getValue));
+    }
+
+    public String storeName(final String configName) {
+        return ofNullable(configs.get(format("%s.store.name", configName))).map(this::asStringOrNull).orElse(configName);
+    }
+
+    public String topicName(final String configName) {
         return ofNullable(configs.get(format("%s.topic.name", configName))).map(this::asStringOrNull).orElse(configName);
     }
 
-    public Optional<Integer> topicPartitions(String configName) {
+    public Optional<Integer> topicPartitions(final String configName) {
         return ofNullable(configs.get(format("%s.topic.partitions", configName))).map(this::asStringOrNull).map(Integer::valueOf);
     }
 
-    public Optional<Short> topicReplicationFactor(String configName) {
+    public Optional<Short> topicReplicationFactor(final String configName) {
         return ofNullable(configs.get(format("%s.topic.replication.factor", configName))).map(this::asStringOrNull).map(Short::valueOf);
     }
 
-    public Set<String> topicNames(String... configNames) {
+    public Set<String> topicNames(final String... configNames) {
         return stream(configNames)
                 .map(this::topicName)
                 .collect(toSet());
     }
 
-    public Set<NewTopic> topics(String... configNames) {
+    public Set<NewTopic> topics(final String... configNames) {
         return stream(configNames)
                 .map(this::topic)
                 .collect(toSet());
     }
 
     public Set<NewTopic> topics() {
-        Set<NewTopic> topics = new HashSet<>();
-        for (String configName : findTopicConfigNames()) {
+        final Set<NewTopic> topics = new HashSet<>();
+        for (final String configName : findTopicConfigNames()) {
             topics.add(topic(configName));
         }
         return topics;
     }
 
-    public NewTopic topic(String configName) {
-        String topicName = topicName(configName);
-        Optional<Integer> partitions = topicPartitions(configName);
-        Optional<Short> replicationFactor = topicReplicationFactor(configName);
+    public NewTopic topic(final String configName) {
+        final String topicName = topicName(configName);
+        final Optional<Integer> partitions = topicPartitions(configName);
+        final Optional<Short> replicationFactor = topicReplicationFactor(configName);
         return new NewTopic(topicName, partitions, replicationFactor);
     }
 
     private Set<String> findTopicConfigNames() {
-        Set<String> configName = new HashSet<>();
-        for (Object key : configs.keySet()) {
-            String config = String.valueOf(key);
-            Matcher matcher = TOPIC_CONFIG_PATTERN.matcher(config);
+        final Set<String> configName = new HashSet<>();
+        for (final Object key : configs.keySet()) {
+            final String config = String.valueOf(key);
+            final Matcher matcher = TOPIC_CONFIG_PATTERN.matcher(config);
             if (matcher.matches()) {
                 configName.add(matcher.group("name"));
             }
@@ -89,7 +110,7 @@ public class AppConfigs {
         return configName;
     }
 
-    private String asStringOrNull(Object value) {
+    private String asStringOrNull(final Object value) {
         return value != null ? String.valueOf(value) : null;
     }
 
