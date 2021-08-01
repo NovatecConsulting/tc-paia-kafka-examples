@@ -3,22 +3,24 @@ package de.novatec.tc.pseudonymize;
 import de.novatec.tc.account.v1.Account;
 import de.novatec.tc.account.v1.ActionEvent;
 import de.novatec.tc.support.AppConfigs;
-import de.novatec.tc.support.Configs;
 import de.novatec.tc.support.SerdeBuilder;
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.state.KeyValueStore;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import static de.novatec.tc.support.FileSupport.deleteQuietly;
+import static de.novatec.tc.support.FileSupport.tempDirectory;
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 import static java.util.UUID.randomUUID;
+import static org.apache.kafka.streams.StreamsConfig.STATE_DIR_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -130,42 +132,42 @@ class PseudonymizeAppTest {
     }
 
     static final String PROPERTIES_FILE = "pseudonymize.properties";
-
     static final String SCHEMA_REGISTRY_SCOPE = PseudonymizeAppTest.class.getName();
     static final String MOCK_SCHEMA_REGISTRY_URL = "mock://" + SCHEMA_REGISTRY_SCOPE;
 
-    @AfterEach
-    void tearDown() {
-        MockSchemaRegistry.dropScope(SCHEMA_REGISTRY_SCOPE);
-    }
-
     void runWithTopologyTestDriver(Consumer<TestScope> testAction) {
-        final AppConfigs appConfigs = new AppConfigs(Configs.combined(
-                Configs.fromResource(PROPERTIES_FILE),
-                Map.of(SCHEMA_REGISTRY_URL_CONFIG, MOCK_SCHEMA_REGISTRY_URL)));
+        final AppConfigs appConfigs = AppConfigs.fromAll(
+                AppConfigs.fromResource(PROPERTIES_FILE),
+                AppConfigs.fromMap(Map.of(SCHEMA_REGISTRY_URL_CONFIG, MOCK_SCHEMA_REGISTRY_URL)),
+                AppConfigs.fromMap(Map.of(STATE_DIR_CONFIG, tempDirectory("kafka-streams").getPath())));
 
         final SerdeBuilder<String> stringSerdeBuilder = SerdeBuilder.fromSerdeSupplier(Serdes.StringSerde::new);
         final SerdeBuilder<ActionEvent> actionEventSerdeBuilder = SerdeBuilder.fromSerdeSupplier(SpecificAvroSerde::new);
 
-        final Topology topology = new PseudonymizeApp().buildTopology(appConfigs.asMap());
+        final Topology topology = new PseudonymizeApp().buildTopology(appConfigs.createMap());
 
-        try (final TopologyTestDriver driver = new TopologyTestDriver(topology, appConfigs.asProperties())) {
+        try (final TopologyTestDriver driver = new TopologyTestDriver(topology, appConfigs.createProperties())) {
 
             // Setup input and output topics.
             final TestInputTopic<String, ActionEvent> input = driver
                     .createInputTopic(appConfigs.topicName("input"),
-                            stringSerdeBuilder.build(appConfigs.asMap(), true).serializer(),
-                            actionEventSerdeBuilder.build(appConfigs.asMap(), false).serializer());
+                            stringSerdeBuilder.build(appConfigs.createMap(), true).serializer(),
+                            actionEventSerdeBuilder.build(appConfigs.createMap(), false).serializer());
             final TestOutputTopic<String, ActionEvent> output = driver
                     .createOutputTopic(appConfigs.topicName("output"),
-                            stringSerdeBuilder.build(appConfigs.asMap(), true).deserializer(),
-                            actionEventSerdeBuilder.build(appConfigs.asMap(), false).deserializer());
+                            stringSerdeBuilder.build(appConfigs.createMap(), true).deserializer(),
+                            actionEventSerdeBuilder.build(appConfigs.createMap(), false).deserializer());
 
             // Retrieve state stores
             final KeyValueStore<String, Account> pseudonymStore = driver.getKeyValueStore(appConfigs.storeName("pseudonym"));
 
             // Run actual test action
             testAction.accept(new TestScope(input, output, pseudonymStore));
+
+        } finally {
+            // Clean up
+            MockSchemaRegistry.dropScope(SCHEMA_REGISTRY_SCOPE);
+            deleteQuietly(Path.of(String.valueOf(appConfigs.get(STATE_DIR_CONFIG))).toFile());
         }
     }
 

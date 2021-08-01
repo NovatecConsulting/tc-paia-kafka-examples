@@ -59,6 +59,9 @@ avro {
 
 test {
     useJUnitPlatform()
+
+    systemProperty "java.io.tmpdir", "$buildDir/tmp"
+
     testLogging {
         outputs.upToDateWhen { false }
         showStandardStreams = true

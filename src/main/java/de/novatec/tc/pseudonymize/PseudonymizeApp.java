@@ -2,7 +2,10 @@ package de.novatec.tc.pseudonymize;
 
 import de.novatec.tc.account.v1.Account;
 import de.novatec.tc.account.v1.ActionEvent;
-import de.novatec.tc.support.*;
+import de.novatec.tc.support.AppConfigs;
+import de.novatec.tc.support.SerdeBuilder;
+import de.novatec.tc.support.TopicSupport;
+import de.novatec.tc.support.TypedStoreRef;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -22,8 +25,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
-import static de.novatec.tc.support.AppConfigs.asProperties;
-import static de.novatec.tc.support.FileSupport.cleanUpHook;
+import static de.novatec.tc.support.AppConfigs.createProperties;
+import static de.novatec.tc.support.FileSupport.deleteHook;
 import static de.novatec.tc.support.FileSupport.tempDirectory;
 import static java.util.UUID.randomUUID;
 import static org.apache.commons.lang3.RandomStringUtils.randomAlphabetic;
@@ -35,24 +38,24 @@ import static org.apache.kafka.streams.state.Stores.persistentKeyValueStore;
 public class PseudonymizeApp {
 
     public static void main(final String[] args) {
-        final Map<String, Object> configs = Configs.combined(
-                Configs.fromResource("pseudonymize.properties"),
-                Configs.fromEnv("APP_"),
-                Configs.fromArgs(PseudonymizeApp.class.getSimpleName(), args));
+        final AppConfigs appConfigs = AppConfigs.fromAll(
+                AppConfigs.fromResource("pseudonymize.properties"),
+                AppConfigs.fromEnv("APP_"),
+                AppConfigs.fromArgs(args)).doLog();
 
-        new PseudonymizeApp().runApp(configs);
+        new PseudonymizeApp().runApp(appConfigs.createMap());
     }
 
     public void runApp(final Map<String, ?> configs) {
         new TopicSupport(configs)
-                .createTopicsIfNotExists(AppConfigs.of(configs).topics(), Duration.ofSeconds(5));
+                .createTopicsIfNotExists(AppConfigs.fromMap(configs).topics(), Duration.ofSeconds(5));
 
         final Map<String, Object> actualConfigs = new HashMap<>(configs);
         final CountDownLatch cleanUpMonitor = new CountDownLatch(1);
         actualConfigs.computeIfAbsent(STATE_DIR_CONFIG,
-                key -> cleanUpHook(tempDirectory("kafka-streams"), cleanUpMonitor::await, Duration.ofSeconds(10)).getPath());
+                key -> deleteHook(tempDirectory("kafka-streams"), cleanUpMonitor::await, Duration.ofSeconds(10)).getPath());
 
-        final KafkaStreams streams = new KafkaStreams(buildTopology(actualConfigs), asProperties(actualConfigs));
+        final KafkaStreams streams = new KafkaStreams(buildTopology(actualConfigs), createProperties(actualConfigs));
         streams.setUncaughtExceptionHandler((exception) -> SHUTDOWN_CLIENT);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

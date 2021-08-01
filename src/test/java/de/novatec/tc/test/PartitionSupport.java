@@ -1,4 +1,4 @@
-package de.novatec.tc.support;
+package de.novatec.tc.test;
 
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.utils.Utils;
