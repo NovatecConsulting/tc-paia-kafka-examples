@@ -19,7 +19,7 @@ repositories {
 }
 
 ext {
-    minJavaVersion = "11"
+    minJavaVersion = "16"
 }
 
 dependencies {
@@ -32,6 +32,8 @@ dependencies {
 
     runtimeOnly libs.slf4jlog4j
 
+    testImplementation libs.kafkaStreams_test
+    testImplementation libs.assertj
     testImplementation libs.junitApi
     testRuntimeOnly libs.junitEngine
 }

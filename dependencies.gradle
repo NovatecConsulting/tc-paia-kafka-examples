@@ -12,7 +12,8 @@ versions += [
     awaitility: "4.1.0",
     slf4j: "1.7.32",
     log4j: "1.2.17",
-    junit: "5.7.2"
+    junit: "5.7.2",
+    assertj: "3.20.2",
 ]
 
 libs += [
@@ -28,6 +29,7 @@ libs += [
 
     junitApi: "org.junit.jupiter:junit-jupiter-api:${versions.junit}",
     junitEngine: "org.junit.jupiter:junit-jupiter-engine:${versions.junit}",
+    assertj: "org.assertj:assertj-core:${versions.assertj}",
     kafkaClients_test: "org.apache.kafka:kafka-clients:${versions.kafka}:test",
     kafkaStreams_test: "org.apache.kafka:kafka-streams-test-utils:${versions.kafka}",
     slf4jlog4j: "org.slf4j:slf4j-log4j12:${versions.slf4j}",
