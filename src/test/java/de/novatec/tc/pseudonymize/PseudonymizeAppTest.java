@@ -61,34 +61,69 @@ class PseudonymizeAppTest {
         runWithTopologyTestDriver(scope -> {
             // Produce some input data to the input topic.
             String inputKeyA = "accountA";
-            ActionEvent inputEvent1 = ActionEvent.newBuilder()
+            ActionEvent inputEventA1 = ActionEvent.newBuilder()
                     .setEventId(randomUUID().toString())
                     .setEventTime(Instant.now())
                     .setAccountId(inputKeyA)
                     .setAccountName("Anja Abele")
                     .setAction("start")
                     .build();
-            scope.input.pipeInput(inputKeyA, inputEvent1);
-            ActionEvent inputEvent2 = ActionEvent.newBuilder()
+            scope.input.pipeInput(inputKeyA, inputEventA1);
+            ActionEvent inputEventA2 = ActionEvent.newBuilder()
                     .setEventId(randomUUID().toString())
                     .setEventTime(Instant.now())
                     .setAccountId(inputKeyA)
                     .setAccountName("Diana Deuss")
                     .setAction("accelerate")
                     .build();
-            scope.input.pipeInput(inputKeyA, inputEvent2);
+            scope.input.pipeInput(inputKeyA, inputEventA2);
 
             // Verify the application's output data.
             KeyValue<String, ActionEvent> receivedEvent1 = scope.output.readKeyValue();
             KeyValue<String, ActionEvent> receivedEvent2 = scope.output.readKeyValue();
-            assertThat(receivedEvent1.value.getAction()).isEqualTo(inputEvent1.getAction());
-            assertThat(receivedEvent2.value.getAction()).isEqualTo(inputEvent2.getAction());
+            assertThat(receivedEvent1.value.getAction()).isEqualTo(inputEventA1.getAction());
+            assertThat(receivedEvent2.value.getAction()).isEqualTo(inputEventA2.getAction());
             assertThat(receivedEvent1.key).isEqualTo(receivedEvent2.key);
             // This is a deliberately simple implementation
             // that always uses the same values per account for all other person-related fields.
             assertThat(receivedEvent1.value.getAccountName()).isEqualTo(receivedEvent2.value.getAccountName());
             // The event id is unique for each event,
             // so a new id is simply always generated here to prevent a reference to the source event.
+            assertThat(receivedEvent1.value.getEventId()).isNotEqualTo(receivedEvent2.value.getEventId());
+            assertTrue(scope.output.isEmpty());
+        });
+    }
+
+    @Test
+    void shouldPseudonymizeWithDifferentValuesForDifferentKey() {
+        runWithTopologyTestDriver(scope -> {
+            // Produce some input data to the input topic.
+            String inputKeyA = "accountA";
+            ActionEvent inputEventA1 = ActionEvent.newBuilder()
+                    .setEventId(randomUUID().toString())
+                    .setEventTime(Instant.now())
+                    .setAccountId(inputKeyA)
+                    .setAccountName("Anja Abele")
+                    .setAction("start")
+                    .build();
+            scope.input.pipeInput(inputKeyA, inputEventA1);
+            String inputKeyB = "accountB";
+            ActionEvent inputEventB1 = ActionEvent.newBuilder()
+                    .setEventId(randomUUID().toString())
+                    .setEventTime(Instant.now())
+                    .setAccountId(inputKeyB)
+                    .setAccountName("Anja Abele")
+                    .setAction("accelerate")
+                    .build();
+            scope.input.pipeInput(inputKeyB, inputEventB1);
+
+            // Verify the application's output data.
+            KeyValue<String, ActionEvent> receivedEvent1 = scope.output.readKeyValue();
+            KeyValue<String, ActionEvent> receivedEvent2 = scope.output.readKeyValue();
+            assertThat(receivedEvent1.value.getAction()).isEqualTo(inputEventA1.getAction());
+            assertThat(receivedEvent2.value.getAction()).isEqualTo(inputEventB1.getAction());
+            assertThat(receivedEvent1.key).isNotEqualTo(receivedEvent2.key);
+            assertThat(receivedEvent1.value.getAccountName()).isNotEqualTo(receivedEvent2.value.getAccountName());
             assertThat(receivedEvent1.value.getEventId()).isNotEqualTo(receivedEvent2.value.getEventId());
             assertTrue(scope.output.isEmpty());
         });
