@@ -144,7 +144,7 @@ class PseudonymizeAppTest {
         final SerdeBuilder<String> stringSerdeBuilder = SerdeBuilder.fromSerdeSupplier(Serdes.StringSerde::new);
         final SerdeBuilder<ActionEvent> actionEventSerdeBuilder = SerdeBuilder.fromSerdeSupplier(SpecificAvroSerde::new);
 
-        final Topology topology = new PseudonymizeApp().buildTopology(appConfigs.createMap());
+        final Topology topology = new PseudonymizeApp().buildTopology(appConfigs);
 
         try (final TopologyTestDriver driver = new TopologyTestDriver(topology, appConfigs.createProperties())) {
 

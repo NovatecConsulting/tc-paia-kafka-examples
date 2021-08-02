@@ -21,11 +21,8 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
-import static de.novatec.tc.support.AppConfigs.createProperties;
 import static de.novatec.tc.support.FileSupport.deleteHook;
 import static de.novatec.tc.support.FileSupport.tempDirectory;
 import static java.util.UUID.randomUUID;
@@ -43,19 +40,20 @@ public class PseudonymizeApp {
                 AppConfigs.fromEnv("APP_"),
                 AppConfigs.fromArgs(args)).doLog();
 
-        new PseudonymizeApp().runApp(appConfigs.createMap());
+        new PseudonymizeApp().runApp(appConfigs);
     }
 
-    public void runApp(final Map<String, ?> configs) {
-        new TopicSupport(configs)
-                .createTopicsIfNotExists(AppConfigs.fromMap(configs).topics(), Duration.ofSeconds(5));
+    public void runApp(final AppConfigs appConfigs) {
+        new TopicSupport(appConfigs.createMap())
+                .createTopicsIfNotExists(appConfigs.topics(), Duration.ofSeconds(5));
 
-        final Map<String, Object> actualConfigs = new HashMap<>(configs);
         final CountDownLatch cleanUpMonitor = new CountDownLatch(1);
-        actualConfigs.computeIfAbsent(STATE_DIR_CONFIG,
-                key -> deleteHook(tempDirectory("kafka-streams"), cleanUpMonitor::await, Duration.ofSeconds(10)).getPath());
+        final AppConfigs actualAppConfigs = appConfigs.createAppConfigsWith(newConfigs ->
+            newConfigs.computeIfAbsent(STATE_DIR_CONFIG,
+                    key -> deleteHook(tempDirectory("kafka-streams"), cleanUpMonitor::await, Duration.ofSeconds(10)).getPath())
+        );
 
-        final KafkaStreams streams = new KafkaStreams(buildTopology(actualConfigs), createProperties(actualConfigs));
+        final KafkaStreams streams = new KafkaStreams(buildTopology(actualAppConfigs), actualAppConfigs.createProperties());
         streams.setUncaughtExceptionHandler((exception) -> SHUTDOWN_CLIENT);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -66,22 +64,21 @@ public class PseudonymizeApp {
         streams.start();
     }
 
-    public Topology buildTopology(final Map<String, ?> configs) {
+    public Topology buildTopology(final AppConfigs appConfigs) {
         final SerdeBuilder<String> stringSerdeBuilder = SerdeBuilder.fromSerdeSupplier(Serdes.StringSerde::new);
         final SerdeBuilder<ActionEvent> actionEventSerdeBuilder = SerdeBuilder.fromSerdeSupplier(SpecificAvroSerde::new);
         final SerdeBuilder<Account> accountSerdeBuilder = SerdeBuilder.fromSerdeSupplier(SpecificAvroSerde::new);
-        return buildTopology(configs, stringSerdeBuilder, actionEventSerdeBuilder, accountSerdeBuilder);
+        return buildTopology(appConfigs, stringSerdeBuilder, actionEventSerdeBuilder, accountSerdeBuilder);
     }
 
-    public Topology buildTopology(final Map<String, ?> configs,
+    public Topology buildTopology(final AppConfigs appConfigs,
                                   final SerdeBuilder<String> stingSerdeBuilder,
                                   final SerdeBuilder<ActionEvent> actionEventSerdeBuilder,
                                   final SerdeBuilder<Account> accountSerdeBuilder) {
-        final Serde<String> stringSerde = stingSerdeBuilder.build(configs, true);
-        final Serde<ActionEvent> actionEventSerde = actionEventSerdeBuilder.build(configs, false);
-        final Serde<Account> accountSerde = accountSerdeBuilder.build(configs, false);
+        final Serde<String> stringSerde = stingSerdeBuilder.build(appConfigs.createMap(), true);
+        final Serde<ActionEvent> actionEventSerde = actionEventSerdeBuilder.build(appConfigs.createMap(), false);
+        final Serde<Account> accountSerde = accountSerdeBuilder.build(appConfigs.createMap(), false);
 
-        final AppConfigs appConfigs = new AppConfigs(configs);
         final StreamsBuilder builder = new StreamsBuilder();
 
         final StoreBuilder<KeyValueStore<String, Account>> pseudonymStoreBuilder =

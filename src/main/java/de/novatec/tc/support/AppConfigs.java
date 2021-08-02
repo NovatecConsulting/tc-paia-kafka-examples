@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -110,6 +111,12 @@ public class AppConfigs {
         return properties.entrySet().stream()
                 .map(e -> Pair.of(String.valueOf(e.getKey()), e.getValue()))
                 .collect(toMap(Pair::getKey, Pair::getValue));
+    }
+
+    public AppConfigs createAppConfigsWith(Consumer<Map<String, Object>> newConfigsConsumer) {
+        Map<String, Object> newConfigs = new HashMap<>(configs);
+        newConfigsConsumer.accept(newConfigs);
+        return fromMap(newConfigs);
     }
 
     public Object get(String key) {

@@ -9,7 +9,7 @@ plugins {
 apply from: "$rootDir/dependencies.gradle"
 
 group 'de.novatec.tc'
-version '1.0-SNAPSHOT'
+version '0.1-SNAPSHOT'
 
 repositories {
     mavenCentral()
@@ -27,7 +27,6 @@ dependencies {
     implementation libs.kafkaStreamsAvroSerde
     implementation libs.avro
     implementation libs.commonsLang
-    implementation libs.argparse4j
     implementation libs.awaitility
 
     runtimeOnly libs.slf4jlog4j
