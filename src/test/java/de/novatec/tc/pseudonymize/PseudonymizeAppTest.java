@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static de.novatec.tc.support.FileSupport.deleteQuietly;
@@ -129,6 +130,48 @@ class PseudonymizeAppTest {
             assertThat(receivedEvent1.value.getEventId()).isNotEqualTo(receivedEvent2.value.getEventId());
             assertTrue(scope.output.isEmpty());
         });
+    }
+
+    @Test
+    void shouldPseudonymizeWithDifferentValuesForSameKeyButIndependentRuns() {
+        // The pseudonymizer should replace with "random" values for a ke and not calculate them.
+        // Therefore, we check, that two independent executions are generating different pseudonyms.
+
+        // Create input data
+        String inputKeyA = "accountA";
+        ActionEvent inputEventA1 = ActionEvent.newBuilder()
+                .setEventId(randomUUID().toString())
+                .setEventTime(Instant.now())
+                .setAccountId(inputKeyA)
+                .setAccountName("Anja Abele")
+                .setAction("start")
+                .build();
+
+        // First run with input data
+        final AtomicReference<KeyValue<String, ActionEvent>> receivedEvent1 = new AtomicReference<>();
+        runWithTopologyTestDriver(scope -> {
+            // Produce input data to the input topic.
+            scope.input.pipeInput(inputKeyA, inputEventA1);
+            // Save output event
+            receivedEvent1.set(scope.output.readKeyValue());
+            assertTrue(scope.output.isEmpty());
+        });
+
+        // Second run with same input data
+        final AtomicReference<KeyValue<String, ActionEvent>> receivedEvent2 = new AtomicReference<>();
+        runWithTopologyTestDriver(scope -> {
+            // Produce input data to the input topic.
+            scope.input.pipeInput(inputKeyA, inputEventA1);
+            // Save output event
+            receivedEvent2.set(scope.output.readKeyValue());
+            assertTrue(scope.output.isEmpty());
+        });
+
+        // Verify the application's output data.
+        assertThat(receivedEvent1.get().key).isNotEqualTo(receivedEvent2.get().key);
+        assertThat(receivedEvent1.get().value.getAccountName()).isNotEqualTo(receivedEvent2.get().value.getAccountName());
+        assertThat(receivedEvent1.get().value.getAction()).isEqualTo(inputEventA1.getAction());
+        assertThat(receivedEvent1.get().value.getAction()).isEqualTo(inputEventA1.getAction());
     }
 
     static final String PROPERTIES_FILE = "pseudonymize.properties";

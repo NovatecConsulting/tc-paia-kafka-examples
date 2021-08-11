@@ -11,13 +11,6 @@ apply from: "$rootDir/dependencies.gradle"
 group 'de.novatec.tc'
 version '0.1-SNAPSHOT'
 
-repositories {
-    mavenCentral()
-    maven {
-        url 'https://packages.confluent.io/maven/'
-    }
-}
-
 ext {
     minJavaVersion = "16"
 }
@@ -31,16 +24,27 @@ dependencies {
 
     runtimeOnly libs.slf4jlog4j
 
-    testImplementation libs.kafkaStreams_test
+    testImplementation libs.kafkaStreamsTestUtils
     testImplementation libs.assertj
     testImplementation libs.junitApi
     testRuntimeOnly libs.junitEngine
+
+    // required for integration tests
+    testImplementation libs.kafka
+    testImplementation libs.kafka_test
+    testImplementation libs.kafkaClients_test
+    testImplementation libs.kafka_test_sources // required, because intellij does not automatically detect test sources
+    testImplementation libs.kafkaClients_test_sources // required, because intellij does not automatically detect test sources
+    testRuntimeOnly 'org.bouncycastle:bcprov-jdk16:1.46' // for ZK test
 }
 
 configurations.all {
     resolutionStrategy {
         // required because avro serde includes Confluent Kafka
         force libs.kafkaClients
+        force libs.kafka
+        // check for updates every build for snapshot versions
+        cacheChangingModulesFor 12, 'hours'
     }
 }
 

@@ -15,7 +15,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static java.lang.String.format;
-import static java.util.Arrays.stream;
+import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.*;
@@ -139,14 +139,26 @@ public class AppConfigs {
         return ofNullable(configs.get(format("%s.topic.replication.factor", configName))).map(this::asStringOrNull).map(Short::valueOf);
     }
 
+    public Set<String> topicNames() {
+        return topicNames(findTopicConfigNames());
+    }
+
     public Set<String> topicNames(final String... configNames) {
-        return stream(configNames)
+        return topicNames(asList(configNames));
+    }
+
+    public Set<String> topicNames(final Collection<String> configNames) {
+        return configNames.stream()
                 .map(this::topicName)
                 .collect(toSet());
     }
 
     public Set<NewTopic> topics(final String... configNames) {
-        return stream(configNames)
+        return topics(asList(configNames));
+    }
+
+    public Set<NewTopic> topics(final Collection<String> configNames) {
+        return configNames.stream()
                 .map(this::topic)
                 .collect(toSet());
     }

@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -32,24 +33,6 @@ public final class FileSupport {
         return file;
     }
 
-    public static File deleteHook(final File file, final Monitor monitor, final Duration timeout) {
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            try {
-                if(monitor.await(timeout.toMillis(), MILLISECONDS)) {
-                    Utils.delete(file);
-                    LOG.info("Deleted {}", file.getAbsolutePath());
-                } else {
-                    LOG.warn("{} was not deleted, because timeout elapsed.", file.getAbsolutePath());
-                }
-            } catch (InterruptedException e) {
-                LOG.warn("{} was not deleted, because clean up was interrupted.", file.getAbsolutePath());
-            } catch (IOException e) {
-                LOG.warn("Error deleting {}", file.getAbsolutePath());
-            }
-        }));
-        return file;
-    }
-
     /**
      * Recursively delete the given file/directory and any subfiles (if any exist)
      *
@@ -62,6 +45,26 @@ public final class FileSupport {
         } catch (IOException e) {
             LOG.warn("Error deleting {}", file.getAbsolutePath());
         }
+    }
+
+    public static File deleteCloseable(final File file, final Consumer<AutoCloseable> deleteActionConsumer) {
+        deleteActionConsumer.accept(() -> deleteQuietly(file));
+        return file;
+    }
+
+    public static File deleteHook(final File file, final Monitor monitor, final Duration timeout) {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                if(monitor.await(timeout.toMillis(), MILLISECONDS)) {
+                    deleteQuietly(file);
+                } else {
+                    LOG.warn("{} was not deleted, because timeout elapsed.", file.getAbsolutePath());
+                }
+            } catch (InterruptedException e) {
+                LOG.warn("{} was not deleted, because clean up was interrupted.", file.getAbsolutePath());
+            }
+        }));
+        return file;
     }
 
     public interface Monitor {

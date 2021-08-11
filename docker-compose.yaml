@@ -32,6 +32,8 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1 # (default: 2) Overridden min.insync.replicas config for the transaction topic. Must be 1, because we only have a single broker.
       #### Topics ####
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      #### Group Membership ####
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
 
   #############################################################
   # Confluent Schema Registry (CP)                            #

@@ -43,7 +43,7 @@ public class PseudonymizeDriver {
                 .build(appConfigs.createMap(), false).serializer();
 
         final ScheduledRecordSender recordSender =
-                new ScheduledRecordSender(appConfigs.createMap(), Duration.ofSeconds(10), Duration.ofSeconds(5), 3);
+                new ScheduledRecordSender(appConfigs.createMap(), Duration.ofSeconds(10), Duration.ofSeconds(3), 3);
         recordSender.sendAtFixedRate(() -> {
             Account account = accounts.get((int) (random() * accounts.size() - 1));
             ActionEvent event = ActionEvent.newBuilder()

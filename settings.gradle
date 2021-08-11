@@ -1,2 +1,26 @@
 rootProject.name = 'tc-paia-kafka-examples'
 
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        maven {
+            url 'https://europe-west3-maven.pkg.dev/gcp-uweeisele-dev/kafka-snapshots'
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+        maven {
+            url 'https://europe-west3-maven.pkg.dev/gcp-uweeisele-dev/confluent-snapshots'
+            mavenContent {
+                snapshotsOnly()
+            }
+        }
+        maven {
+            url 'https://packages.confluent.io/maven/'
+            mavenContent {
+                releasesOnly()
+            }
+        }
+        maven { url 'https://jitpack.io' } // for testing only (json schema validation of schema registry)
+    }
+}

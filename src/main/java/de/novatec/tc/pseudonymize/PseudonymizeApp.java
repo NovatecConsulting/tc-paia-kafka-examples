@@ -2,17 +2,11 @@ package de.novatec.tc.pseudonymize;
 
 import de.novatec.tc.account.v1.Account;
 import de.novatec.tc.account.v1.ActionEvent;
-import de.novatec.tc.support.AppConfigs;
-import de.novatec.tc.support.SerdeBuilder;
-import de.novatec.tc.support.TopicSupport;
-import de.novatec.tc.support.TypedStoreRef;
+import de.novatec.tc.support.*;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.KeyValue;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.Transformer;
@@ -21,14 +15,14 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 
 import java.time.Duration;
-import java.util.concurrent.CountDownLatch;
+import java.util.Collection;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-import static de.novatec.tc.support.FileSupport.deleteHook;
+import static de.novatec.tc.support.FileSupport.deleteCloseable;
 import static de.novatec.tc.support.FileSupport.tempDirectory;
 import static java.util.UUID.randomUUID;
 import static org.apache.commons.lang3.RandomStringUtils.randomAlphabetic;
 import static org.apache.kafka.streams.StreamsConfig.STATE_DIR_CONFIG;
-import static org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler.StreamThreadExceptionResponse.SHUTDOWN_CLIENT;
 import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 import static org.apache.kafka.streams.state.Stores.persistentKeyValueStore;
 
@@ -40,28 +34,25 @@ public class PseudonymizeApp {
                 AppConfigs.fromEnv("APP_"),
                 AppConfigs.fromArgs(args)).doLog();
 
-        new PseudonymizeApp().runApp(appConfigs);
+        new PseudonymizeApp()
+                .runApp(appConfigs)
+                .registerShutdownHook(Duration.ofSeconds(10));
     }
 
-    public void runApp(final AppConfigs appConfigs) {
+    public StreamsApp runApp(final AppConfigs appConfigs) {
         new TopicSupport(appConfigs.createMap())
                 .createTopicsIfNotExists(appConfigs.topics(), Duration.ofSeconds(5));
 
-        final CountDownLatch cleanUpMonitor = new CountDownLatch(1);
+        final Collection<AutoCloseable> closeables = new CopyOnWriteArrayList<>();
         final AppConfigs actualAppConfigs = appConfigs.createAppConfigsWith(newConfigs ->
             newConfigs.computeIfAbsent(STATE_DIR_CONFIG,
-                    key -> deleteHook(tempDirectory("kafka-streams"), cleanUpMonitor::await, Duration.ofSeconds(10)).getPath())
+                    key -> deleteCloseable(tempDirectory("kafka-streams"), closeables::add).getPath())
         );
 
         final KafkaStreams streams = new KafkaStreams(buildTopology(actualAppConfigs), actualAppConfigs.createProperties());
-        streams.setUncaughtExceptionHandler((exception) -> SHUTDOWN_CLIENT);
-
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            streams.close(Duration.ofSeconds(10));
-            cleanUpMonitor.countDown();
-        }, "streams-shutdown-hook"));
-
         streams.start();
+
+        return new StreamsApp(streams, closeables);
     }
 
     public Topology buildTopology(final AppConfigs appConfigs) {
