@@ -16,11 +16,11 @@
       "type": "de.novatec.tc.account.v1.Account"
     },
     {
-      "name": "long",
+      "name": "longitude",
       "type": "double"
     },
     {
-      "name": "lat",
+      "name": "latitude",
       "type": "double"
     }
   ]

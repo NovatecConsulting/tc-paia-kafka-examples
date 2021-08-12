@@ -1,9 +1,11 @@
 package de.novatec.tc.pseudonymize;
 
 import de.novatec.tc.account.v1.Account;
-import de.novatec.tc.action.v1.ActionEvent;
 import de.novatec.tc.support.*;
+import io.confluent.kafka.streams.serdes.avro.GenericAvroSerde;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
@@ -29,15 +31,15 @@ import static org.apache.kafka.streams.StreamsConfig.STATE_DIR_CONFIG;
 import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 import static org.apache.kafka.streams.state.Stores.persistentKeyValueStore;
 
-public class PseudonymizeApp {
+public class PseudonymizeGenericApp {
 
     public static void main(final String[] args) {
         final AppConfigs appConfigs = AppConfigs.fromAll(
-                AppConfigs.fromResource("pseudonymize.properties"),
+                AppConfigs.fromResource("pseudonymize-generic.properties"),
                 AppConfigs.fromEnv("APP_"),
                 AppConfigs.fromArgs(args)).doLog();
 
-        new PseudonymizeApp()
+        new PseudonymizeGenericApp()
                 .runApp(appConfigs)
                 .registerShutdownHook(Duration.ofSeconds(10));
     }
@@ -60,17 +62,17 @@ public class PseudonymizeApp {
 
     public Topology buildTopology(final AppConfigs appConfigs) {
         final SerdeBuilder<String> stringSerdeBuilder = SerdeBuilder.fromSerdeSupplier(Serdes.StringSerde::new);
-        final SerdeBuilder<ActionEvent> actionEventSerdeBuilder = SerdeBuilder.fromSerdeSupplier(SpecificAvroSerde::new);
+        final SerdeBuilder<GenericRecord> eventSerdeBuilder = SerdeBuilder.fromSerdeSupplier(GenericAvroSerde::new);
         final SerdeBuilder<Account> accountSerdeBuilder = SerdeBuilder.fromSerdeSupplier(SpecificAvroSerde::new);
-        return buildTopology(appConfigs, stringSerdeBuilder, actionEventSerdeBuilder, accountSerdeBuilder);
+        return buildTopology(appConfigs, stringSerdeBuilder, eventSerdeBuilder, accountSerdeBuilder);
     }
 
     public Topology buildTopology(final AppConfigs appConfigs,
                                   final SerdeBuilder<String> stingSerdeBuilder,
-                                  final SerdeBuilder<ActionEvent> actionEventSerdeBuilder,
+                                  final SerdeBuilder<GenericRecord> eventSerdeBuilder,
                                   final SerdeBuilder<Account> accountSerdeBuilder) {
         final Serde<String> stringSerde = stingSerdeBuilder.build(appConfigs.createMap(), true);
-        final Serde<ActionEvent> actionEventSerde = actionEventSerdeBuilder.build(appConfigs.createMap(), false);
+        final Serde<GenericRecord> actionEventSerde = eventSerdeBuilder.build(appConfigs.createMap(), false);
         final Serde<Account> accountSerde = accountSerdeBuilder.build(appConfigs.createMap(), false);
 
         final StreamsBuilder builder = new StreamsBuilder();
@@ -79,14 +81,18 @@ public class PseudonymizeApp {
                 keyValueStoreBuilder(persistentKeyValueStore(appConfigs.storeName("pseudonym")), stringSerde, accountSerde);
         builder.addStateStore(pseudonymStoreBuilder);
 
-        builder.stream(appConfigs.topicName("input"), Consumed.with(stringSerde, actionEventSerde))
-            .transform(() -> new PseudonymizeTransformer(TypedStoreRef.fromBuilder(pseudonymStoreBuilder)), pseudonymStoreBuilder.name())
-            .to(appConfigs.topicName("output"), Produced.with(stringSerde, actionEventSerde));
+        // create a stream for each configured input/output topic
+        // the streams are linked by the state store, which ensures, that the partitions ar co-located
+        for (AppConfigs streamConfigs : appConfigs.withPrefix("stream").allSubAppConfigs()) {
+            builder.stream(streamConfigs.topicName("input"), Consumed.with(stringSerde, actionEventSerde))
+                    .transform(() -> new PseudonymizeTransformer(TypedStoreRef.fromBuilder(pseudonymStoreBuilder)), pseudonymStoreBuilder.name())
+                    .to(streamConfigs.topicName("output"), Produced.with(stringSerde, actionEventSerde));
+        }
 
         return builder.build();
     }
 
-    public static class PseudonymizeTransformer implements Transformer<String, ActionEvent, KeyValue<String, ActionEvent>> {
+    public static class PseudonymizeTransformer implements Transformer<String, GenericRecord, KeyValue<String, GenericRecord>> {
 
         private final TypedStoreRef<KeyValueStore<String, Account>> pseudonymStoreRef;
 
@@ -106,7 +112,7 @@ public class PseudonymizeApp {
         }
 
         @Override
-        public KeyValue<String, ActionEvent> transform(final String accountId, final ActionEvent event) {
+        public KeyValue<String, GenericRecord> transform(final String accountId, final GenericRecord event) {
             Account pseudonymAccount = pseudonymStore.get(accountId);
             if (pseudonymAccount == null) {
                 pseudonymAccount = Account.newBuilder()
@@ -115,12 +121,11 @@ public class PseudonymizeApp {
                         .build();
                 pseudonymStore.put(accountId, pseudonymAccount);
             }
-            final ActionEvent pseudonymizedEvent;
+            final GenericRecord pseudonymizedEvent;
             if (event != null) {
-                pseudonymizedEvent = ActionEvent.newBuilder(event)
-                        .setEventId(randomUUID().toString())
-                        .setAccount(Account.newBuilder(pseudonymAccount).build())
-                        .build();
+                pseudonymizedEvent = GenericData.get().deepCopy(event.getSchema(), event);
+                pseudonymizedEvent.put("eventId", randomUUID().toString());
+                pseudonymizedEvent.put("account", Account.newBuilder(pseudonymAccount).build());
             } else {
                 pseudonymizedEvent = null;
             }

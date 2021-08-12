@@ -3,6 +3,7 @@ package de.novatec.tc.test;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.utils.Utils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 
 public class PartitionSupport {
@@ -18,4 +19,5 @@ public class PartitionSupport {
     public int partition(final byte[] keyBytes, final int numPartitions) {
         return Utils.toPositive(Utils.murmur2(keyBytes)) % numPartitions;
     }
+
 }

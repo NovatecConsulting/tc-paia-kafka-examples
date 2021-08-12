@@ -25,7 +25,7 @@ public class AppConfigs {
     private static final Logger LOG = LoggerFactory.getLogger(AppConfigs.class);
 
     private static final Pattern KEY_VALUE_PATTERN = Pattern.compile("^(?<key>[^=]+)=(?<value>[^=]+)$");
-    private static final Pattern TOPIC_CONFIG_PATTERN = Pattern.compile("^(?<name>[^.]+).topic..*$");
+    private static final Pattern TOPIC_CONFIG_PATTERN = Pattern.compile("^(?<name>.+)\\.topic\\..*$");
 
     private final Map<String, ?> configs;
 
@@ -119,6 +119,27 @@ public class AppConfigs {
         return fromMap(newConfigs);
     }
 
+    public AppConfigs withPrefix(String prefix) {
+        return fromMap(
+                configs.entrySet().stream()
+                        .filter(e -> e.getKey().startsWith(prefix + "."))
+                        .map(e -> Pair.of(e.getKey().replaceFirst(prefix + ".", ""), e.getValue()))
+                        .collect(toMap(Pair::getKey, Pair::getValue))
+        );
+    }
+
+    public Set<String> allPrefixes() {
+        return configs.keySet().stream()
+                .map(this::prefixOf)
+                .collect(toSet());
+    }
+
+    public List<AppConfigs> allSubAppConfigs() {
+        return allPrefixes().stream()
+                .map(this::withPrefix)
+                .collect(toList());
+    }
+
     public Object get(String key) {
         return configs.get(key);
     }
@@ -153,12 +174,26 @@ public class AppConfigs {
                 .collect(toSet());
     }
 
+    public Set<String> topicNames(final Pattern configNamePattern) {
+        return findTopicConfigNames().stream()
+                .filter(configName -> configNamePattern.matcher(configName).matches())
+                .map(this::topicName)
+                .collect(toSet());
+    }
+
     public Set<NewTopic> topics(final String... configNames) {
         return topics(asList(configNames));
     }
 
     public Set<NewTopic> topics(final Collection<String> configNames) {
         return configNames.stream()
+                .map(this::topic)
+                .collect(toSet());
+    }
+
+    public Set<NewTopic> topics(final Pattern configNamePattern) {
+        return findTopicConfigNames().stream()
+                .filter(configName -> configNamePattern.matcher(configName).matches())
                 .map(this::topic)
                 .collect(toSet());
     }
@@ -194,4 +229,11 @@ public class AppConfigs {
         return value != null ? String.valueOf(value) : null;
     }
 
+    private String prefixOf(String key) {
+        int index = key.indexOf(".");
+        if (index <= 0) {
+            return key;
+        }
+        return key.substring(0, index);
+    }
 }
