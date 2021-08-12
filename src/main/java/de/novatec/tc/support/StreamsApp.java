@@ -38,7 +38,7 @@ public class StreamsApp implements Stoppable {
     public void close(Duration timeout) {
         LOG.info(format("Initiating shutdown of %s", this.getClass().getSimpleName()));
         for (int i = 0; i < streams.metadataForLocalThreads().size(); i++) {
-            streams.removeStreamThread();
+            streams.removeStreamThread(); // leave consumer group
         }
         if (streams.close(timeout)) {
             closeables.forEach(c -> closeQuietly(c, c.getClass().getSimpleName()));

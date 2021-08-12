@@ -1,0 +1,27 @@
+{
+  "namespace": "de.novatec.tc.position.v1",
+  "name": "PositionEvent",
+  "type": "record",
+  "fields": [
+    {
+      "name" : "eventId",
+      "type": {"type": "string", "logicalType": "uuid"}
+    },
+    {
+      "name": "eventTime",
+      "type": {"type": "long", "logicalType": "timestamp-micros"}
+    },
+    {
+      "name": "account",
+      "type": "de.novatec.tc.account.v1.Account"
+    },
+    {
+      "name": "long",
+      "type": "double"
+    },
+    {
+      "name": "lat",
+      "type": "double"
+    }
+  ]
+}

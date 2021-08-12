@@ -1,12 +1,15 @@
 package de.novatec.tc.pseudonymize;
 
 import de.novatec.tc.account.v1.Account;
-import de.novatec.tc.account.v1.ActionEvent;
+import de.novatec.tc.action.v1.ActionEvent;
 import de.novatec.tc.support.*;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.*;
+import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.KeyValue;
+import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.Transformer;
@@ -114,10 +117,9 @@ public class PseudonymizeApp {
             }
             final ActionEvent pseudonymizedEvent = ActionEvent.newBuilder(event)
                     .setEventId(randomUUID().toString())
-                    .setAccountId(pseudonymAccount.getAccountId())
-                    .setAccountName(pseudonymAccount.getAccountName())
+                    .setAccount(Account.newBuilder(pseudonymAccount).build())
                     .build();
-            return new KeyValue<>(pseudonymizedEvent.getAccountId(), pseudonymizedEvent);
+            return new KeyValue<>(pseudonymAccount.getAccountId(), pseudonymizedEvent);
         }
 
         @Override

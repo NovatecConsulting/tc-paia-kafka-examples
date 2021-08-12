@@ -1,5 +1,5 @@
 {
-  "namespace": "de.novatec.tc.account.v1",
+  "namespace": "de.novatec.tc.action.v1",
   "name": "ActionEvent",
   "type": "record",
   "fields": [
@@ -12,12 +12,8 @@
       "type": {"type": "long", "logicalType": "timestamp-micros"}
     },
     {
-      "name": "accountId",
-      "type": "string"
-    },
-    {
-      "name": "accountName",
-      "type": "string"
+      "name": "account",
+      "type": "de.novatec.tc.account.v1.Account"
     },
     {
       "name": "action",

@@ -1,7 +1,7 @@
 package de.novatec.tc.pseudonymize;
 
 import de.novatec.tc.account.v1.Account;
-import de.novatec.tc.account.v1.ActionEvent;
+import de.novatec.tc.action.v1.ActionEvent;
 import de.novatec.tc.support.AppConfigs;
 import de.novatec.tc.support.SerdeBuilder;
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry;
@@ -35,8 +35,9 @@ class PseudonymizeAppTest {
             ActionEvent inputEvent = ActionEvent.newBuilder()
                     .setEventId(randomUUID().toString())
                     .setEventTime(Instant.now())
-                    .setAccountId(inputKey)
-                    .setAccountName("Anja Abele")
+                    .setAccount(Account.newBuilder()
+                            .setAccountId(inputKey)
+                            .setAccountName("Anja Abele").build())
                     .setAction("start")
                     .build();
             scope.input.pipeInput(inputKey, inputEvent);
@@ -46,15 +47,15 @@ class PseudonymizeAppTest {
             assertThat(receivedEvent.key).isNotBlank();
             assertThat(receivedEvent.key).isNotEqualTo(inputKey);
             assertThat(receivedEvent.value).isNotNull();
-            assertThat(receivedEvent.value.getAccountId()).isNotBlank();
-            assertThat(receivedEvent.value.getAccountId()).isNotEqualTo(inputEvent.getAccountId());
-            assertThat(receivedEvent.value.getAccountName()).isNotBlank();
-            assertThat(receivedEvent.value.getAccountName()).isNotEqualTo(inputEvent.getAccountName());
+            assertThat(receivedEvent.value.getAccount().getAccountId()).isNotBlank();
+            assertThat(receivedEvent.value.getAccount().getAccountId()).isNotEqualTo(inputEvent.getAccount().getAccountId());
+            assertThat(receivedEvent.value.getAccount().getAccountName()).isNotBlank();
+            assertThat(receivedEvent.value.getAccount().getAccountName()).isNotEqualTo(inputEvent.getAccount().getAccountName());
             assertThat(receivedEvent.value.getEventId()).isNotBlank();
             assertThat(receivedEvent.value.getEventId()).isNotEqualTo(inputEvent.getEventId());
             assertThat(receivedEvent.value.getEventTime()).isEqualTo(inputEvent.getEventTime());
             assertThat(receivedEvent.value.getAction()).isEqualTo(inputEvent.getAction());
-            assertThat(receivedEvent.key).isEqualTo(receivedEvent.value.getAccountId());
+            assertThat(receivedEvent.key).isEqualTo(receivedEvent.value.getAccount().getAccountId());
             assertTrue(scope.output.isEmpty());
         });
     }
@@ -67,16 +68,18 @@ class PseudonymizeAppTest {
             ActionEvent inputEventA1 = ActionEvent.newBuilder()
                     .setEventId(randomUUID().toString())
                     .setEventTime(Instant.now())
-                    .setAccountId(inputKeyA)
-                    .setAccountName("Anja Abele")
+                    .setAccount(Account.newBuilder()
+                            .setAccountId(inputKeyA)
+                            .setAccountName("Anja Abele").build())
                     .setAction("start")
                     .build();
             scope.input.pipeInput(inputKeyA, inputEventA1);
             ActionEvent inputEventA2 = ActionEvent.newBuilder()
                     .setEventId(randomUUID().toString())
                     .setEventTime(Instant.now())
-                    .setAccountId(inputKeyA)
-                    .setAccountName("Diana Deuss")
+                    .setAccount(Account.newBuilder()
+                            .setAccountId(inputKeyA)
+                            .setAccountName("Diana Deuss").build())
                     .setAction("accelerate")
                     .build();
             scope.input.pipeInput(inputKeyA, inputEventA2);
@@ -89,7 +92,7 @@ class PseudonymizeAppTest {
             assertThat(receivedEvent1.key).isEqualTo(receivedEvent2.key);
             // This is a deliberately simple implementation
             // that always uses the same values per account for all other person-related fields.
-            assertThat(receivedEvent1.value.getAccountName()).isEqualTo(receivedEvent2.value.getAccountName());
+            assertThat(receivedEvent1.value.getAccount().getAccountName()).isEqualTo(receivedEvent2.value.getAccount().getAccountName());
             // The event id is unique for each event,
             // so a new id is simply always generated here to prevent a reference to the source event.
             assertThat(receivedEvent1.value.getEventId()).isNotEqualTo(receivedEvent2.value.getEventId());
@@ -105,8 +108,9 @@ class PseudonymizeAppTest {
             ActionEvent inputEventA1 = ActionEvent.newBuilder()
                     .setEventId(randomUUID().toString())
                     .setEventTime(Instant.now())
-                    .setAccountId(inputKeyA)
-                    .setAccountName("Anja Abele")
+                    .setAccount(Account.newBuilder()
+                            .setAccountId(inputKeyA)
+                            .setAccountName("Anja Abele").build())
                     .setAction("start")
                     .build();
             scope.input.pipeInput(inputKeyA, inputEventA1);
@@ -114,8 +118,9 @@ class PseudonymizeAppTest {
             ActionEvent inputEventB1 = ActionEvent.newBuilder()
                     .setEventId(randomUUID().toString())
                     .setEventTime(Instant.now())
-                    .setAccountId(inputKeyB)
-                    .setAccountName("Anja Abele")
+                    .setAccount(Account.newBuilder()
+                            .setAccountId(inputKeyB)
+                            .setAccountName("Anja Abele").build())
                     .setAction("accelerate")
                     .build();
             scope.input.pipeInput(inputKeyB, inputEventB1);
@@ -126,7 +131,7 @@ class PseudonymizeAppTest {
             assertThat(receivedEvent1.value.getAction()).isEqualTo(inputEventA1.getAction());
             assertThat(receivedEvent2.value.getAction()).isEqualTo(inputEventB1.getAction());
             assertThat(receivedEvent1.key).isNotEqualTo(receivedEvent2.key);
-            assertThat(receivedEvent1.value.getAccountName()).isNotEqualTo(receivedEvent2.value.getAccountName());
+            assertThat(receivedEvent1.value.getAccount().getAccountName()).isNotEqualTo(receivedEvent2.value.getAccount().getAccountName());
             assertThat(receivedEvent1.value.getEventId()).isNotEqualTo(receivedEvent2.value.getEventId());
             assertTrue(scope.output.isEmpty());
         });
@@ -142,8 +147,9 @@ class PseudonymizeAppTest {
         ActionEvent inputEventA1 = ActionEvent.newBuilder()
                 .setEventId(randomUUID().toString())
                 .setEventTime(Instant.now())
-                .setAccountId(inputKeyA)
-                .setAccountName("Anja Abele")
+                .setAccount(Account.newBuilder()
+                        .setAccountId(inputKeyA)
+                        .setAccountName("Anja Abele").build())
                 .setAction("start")
                 .build();
 
@@ -169,7 +175,7 @@ class PseudonymizeAppTest {
 
         // Verify the application's output data.
         assertThat(receivedEvent1.get().key).isNotEqualTo(receivedEvent2.get().key);
-        assertThat(receivedEvent1.get().value.getAccountName()).isNotEqualTo(receivedEvent2.get().value.getAccountName());
+        assertThat(receivedEvent1.get().value.getAccount().getAccountName()).isNotEqualTo(receivedEvent2.get().value.getAccount().getAccountName());
         assertThat(receivedEvent1.get().value.getAction()).isEqualTo(inputEventA1.getAction());
         assertThat(receivedEvent1.get().value.getAction()).isEqualTo(inputEventA1.getAction());
     }

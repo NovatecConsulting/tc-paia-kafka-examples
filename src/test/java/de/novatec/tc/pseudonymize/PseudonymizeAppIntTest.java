@@ -1,6 +1,7 @@
 package de.novatec.tc.pseudonymize;
 
-import de.novatec.tc.account.v1.ActionEvent;
+import de.novatec.tc.account.v1.Account;
+import de.novatec.tc.action.v1.ActionEvent;
 import de.novatec.tc.support.AppConfigs;
 import de.novatec.tc.support.SerdeBuilder;
 import de.novatec.tc.support.StreamsApp;
@@ -76,8 +77,9 @@ class PseudonymizeAppIntTest {
             ActionEvent inputEvent = ActionEvent.newBuilder()
                     .setEventId(randomUUID().toString())
                     .setEventTime(Instant.now())
-                    .setAccountId(inputKey)
-                    .setAccountName("Anja Abele")
+                    .setAccount(Account.newBuilder()
+                            .setAccountId(inputKey)
+                            .setAccountName("Anja Abele").build())
                     .setAction("start")
                     .build();
             input.pipeInput(inputKey, inputEvent);
@@ -86,8 +88,8 @@ class PseudonymizeAppIntTest {
             assertThat(receivedEvent.key()).isNotBlank();
             assertThat(receivedEvent.key()).isNotEqualTo(inputKey);
             assertThat(receivedEvent.value()).isNotNull();
-            assertThat(receivedEvent.value().getAccountId()).isNotBlank();
-            assertThat(receivedEvent.value().getAccountId()).isNotEqualTo(inputEvent.getAccountId());
+            assertThat(receivedEvent.value().getAccount().getAccountId()).isNotBlank();
+            assertThat(receivedEvent.value().getAccount().getAccountId()).isNotEqualTo(inputEvent.getAccount().getAccountId());
         }
     }
 
@@ -121,8 +123,9 @@ class PseudonymizeAppIntTest {
             ActionEvent inputEvent = ActionEvent.newBuilder()
                     .setEventId(randomUUID().toString())
                     .setEventTime(Instant.now())
-                    .setAccountId(inputKey)
-                    .setAccountName("Anja Abele")
+                    .setAccount(Account.newBuilder()
+                            .setAccountId(inputKey)
+                            .setAccountName("Anja Abele").build())
                     .setAction("start")
                     .build();
 
@@ -147,7 +150,7 @@ class PseudonymizeAppIntTest {
             assertThat(receivedEvent1.key()).isEqualTo(receivedEvent2.key());
             // This is a deliberately simple implementation
             // that always uses the same values per account for all other person-related fields.
-            assertThat(receivedEvent1.value().getAccountName()).isEqualTo(receivedEvent2.value().getAccountName());
+            assertThat(receivedEvent1.value().getAccount().getAccountName()).isEqualTo(receivedEvent2.value().getAccount().getAccountName());
             // The event id is unique for each event,
             // so a new id is simply always generated here to prevent a reference to the source event.
             assertThat(receivedEvent1.value().getEventId()).isNotEqualTo(receivedEvent2.value().getEventId());

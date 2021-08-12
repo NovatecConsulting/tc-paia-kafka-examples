@@ -1,7 +1,7 @@
 package de.novatec.tc.pseudonymize;
 
 import de.novatec.tc.account.v1.Account;
-import de.novatec.tc.account.v1.ActionEvent;
+import de.novatec.tc.action.v1.ActionEvent;
 import de.novatec.tc.support.AppConfigs;
 import de.novatec.tc.support.ScheduledRecordSender;
 import de.novatec.tc.support.SerdeBuilder;
@@ -49,8 +49,7 @@ public class PseudonymizeDriver {
             ActionEvent event = ActionEvent.newBuilder()
                     .setEventId(randomUUID().toString())
                     .setEventTime(Instant.now())
-                    .setAccountId(account.getAccountId())
-                    .setAccountName(account.getAccountName())
+                    .setAccount(Account.newBuilder(account).build())
                     .setAction(actions.get((int) (random() * actions.size() - 1)))
                     .build();
             return new ProducerRecord<>(appConfigs.topicName("input"), account.getAccountId(), event);
