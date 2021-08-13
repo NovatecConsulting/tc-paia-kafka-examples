@@ -32,10 +32,10 @@ dependencies {
     // required for integration tests
     testImplementation libs.kafka
     testImplementation libs.kafka_test
-    testImplementation libs.kafkaClients_test
     testImplementation libs.kafka_test_sources // required, because intellij does not automatically detect test sources
+    testImplementation libs.kafkaClients_test
     testImplementation libs.kafkaClients_test_sources // required, because intellij does not automatically detect test sources
-    testRuntimeOnly 'org.bouncycastle:bcprov-jdk16:1.46' // for ZK test
+    testRuntimeOnly libs.bouncycastle // for ZK test
 }
 
 configurations.all {

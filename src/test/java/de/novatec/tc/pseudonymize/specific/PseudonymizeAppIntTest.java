@@ -2,7 +2,6 @@ package de.novatec.tc.pseudonymize.specific;
 
 import de.novatec.tc.account.v1.Account;
 import de.novatec.tc.action.v1.ActionEvent;
-import de.novatec.tc.pseudonymize.specific.PseudonymizeApp;
 import de.novatec.tc.support.AppConfigs;
 import de.novatec.tc.support.SerdeBuilder;
 import de.novatec.tc.support.StreamsApp;
@@ -164,7 +163,7 @@ class PseudonymizeAppIntTest {
     void initClusterConfigs(ClusterConfig clusterConfig) {
         clusterConfig.serverProperties().put(KafkaConfig$.MODULE$.AutoCreateTopicsEnableProp(), false);
         clusterConfig.serverProperties().put(KafkaConfig$.MODULE$.GroupInitialRebalanceDelayMsProp(), 0);
-        clusterConfig.serverProperties().put(KafkaConfig$.MODULE$.OffsetsTopicReplicationFactorProp(), 1);
+        clusterConfig.serverProperties().put(KafkaConfig$.MODULE$.OffsetsTopicReplicationFactorProp(), (short) 1);
         clusterConfig.serverProperties().put(KafkaConfig$.MODULE$.OffsetsTopicPartitionsProp(), 1);
     }
 
