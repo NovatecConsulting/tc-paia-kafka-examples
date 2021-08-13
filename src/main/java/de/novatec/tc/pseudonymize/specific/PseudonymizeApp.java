@@ -1,4 +1,4 @@
-package de.novatec.tc.pseudonymize;
+package de.novatec.tc.pseudonymize.specific;
 
 import de.novatec.tc.account.v1.Account;
 import de.novatec.tc.action.v1.ActionEvent;
@@ -33,7 +33,7 @@ public class PseudonymizeApp {
 
     public static void main(final String[] args) {
         final AppConfigs appConfigs = AppConfigs.fromAll(
-                AppConfigs.fromResource("pseudonymize.properties"),
+                AppConfigs.fromResource("pseudonymize-specific.properties"),
                 AppConfigs.fromEnv("APP_"),
                 AppConfigs.fromArgs(args)).doLog();
 

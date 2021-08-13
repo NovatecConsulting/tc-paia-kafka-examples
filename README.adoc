@@ -44,13 +44,13 @@ docker-compose up -d
 .Start the pseudonymizer Kafka Streams application
 [source,bash]
 ----
-java -cp build/libs/tc-paia-kafka-examples-0.1-SNAPSHOT-all.jar de.novatec.tc.pseudonymize.PseudonymizeApp
+java -cp build/libs/tc-paia-kafka-examples-0.1-SNAPSHOT-all.jar de.novatec.tc.pseudonymize.specific.PseudonymizeApp
 ----
 
 .Start the driver which creates random ingest data
 [source,bash]
 ----
-java -cp build/libs/tc-paia-kafka-examples-0.1-SNAPSHOT-all.jar de.novatec.tc.pseudonymize.PseudonymizeDriver
+java -cp build/libs/tc-paia-kafka-examples-0.1-SNAPSHOT-all.jar de.novatec.tc.pseudonymize.specific.PseudonymizeDriver
 ----
 
 .Now open three terminals and exec into the Schema Registry Docker container

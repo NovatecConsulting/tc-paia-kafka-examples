@@ -1,4 +1,4 @@
-package de.novatec.tc.pseudonymize;
+package de.novatec.tc.pseudonymize.generic;
 
 import de.novatec.tc.account.v1.Account;
 import de.novatec.tc.support.*;
@@ -31,7 +31,7 @@ import static org.apache.kafka.streams.StreamsConfig.STATE_DIR_CONFIG;
 import static org.apache.kafka.streams.state.Stores.keyValueStoreBuilder;
 import static org.apache.kafka.streams.state.Stores.persistentKeyValueStore;
 
-public class PseudonymizeGenericApp {
+public class PseudonymizeApp {
 
     public static void main(final String[] args) {
         final AppConfigs appConfigs = AppConfigs.fromAll(
@@ -39,7 +39,7 @@ public class PseudonymizeGenericApp {
                 AppConfigs.fromEnv("APP_"),
                 AppConfigs.fromArgs(args)).doLog();
 
-        new PseudonymizeGenericApp()
+        new PseudonymizeApp()
                 .runApp(appConfigs)
                 .registerShutdownHook(Duration.ofSeconds(10));
     }

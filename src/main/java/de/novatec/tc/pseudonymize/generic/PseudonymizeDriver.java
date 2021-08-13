@@ -1,4 +1,4 @@
-package de.novatec.tc.pseudonymize;
+package de.novatec.tc.pseudonymize.generic;
 
 import de.novatec.tc.account.v1.Account;
 import de.novatec.tc.action.v1.ActionEvent;
@@ -23,7 +23,7 @@ import static java.lang.Math.random;
 import static java.util.Arrays.asList;
 import static java.util.UUID.randomUUID;
 
-public class PseudonymizeGenericDriver {
+public class PseudonymizeDriver {
 
     public static void main(final String[] args) {
         final AppConfigs appConfigs = AppConfigs.fromAll(

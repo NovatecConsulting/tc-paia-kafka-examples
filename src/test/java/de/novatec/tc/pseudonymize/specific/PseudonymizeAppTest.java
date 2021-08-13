@@ -1,4 +1,4 @@
-package de.novatec.tc.pseudonymize;
+package de.novatec.tc.pseudonymize.specific;
 
 import de.novatec.tc.account.v1.Account;
 import de.novatec.tc.action.v1.ActionEvent;
@@ -180,7 +180,7 @@ class PseudonymizeAppTest {
         assertThat(receivedEvent1.get().value.getAction()).isEqualTo(inputEventA1.getAction());
     }
 
-    static final String PROPERTIES_FILE = "pseudonymize.properties";
+    static final String PROPERTIES_FILE = "pseudonymize-specific.properties";
     static final String SCHEMA_REGISTRY_SCOPE = PseudonymizeAppTest.class.getName();
     static final String MOCK_SCHEMA_REGISTRY_URL = "mock://" + SCHEMA_REGISTRY_SCOPE;
 

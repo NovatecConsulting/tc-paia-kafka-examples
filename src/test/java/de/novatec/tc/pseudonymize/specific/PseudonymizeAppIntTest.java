@@ -1,7 +1,8 @@
-package de.novatec.tc.pseudonymize;
+package de.novatec.tc.pseudonymize.specific;
 
 import de.novatec.tc.account.v1.Account;
 import de.novatec.tc.action.v1.ActionEvent;
+import de.novatec.tc.pseudonymize.specific.PseudonymizeApp;
 import de.novatec.tc.support.AppConfigs;
 import de.novatec.tc.support.SerdeBuilder;
 import de.novatec.tc.support.StreamsApp;
@@ -157,7 +158,7 @@ class PseudonymizeAppIntTest {
         }
     }
 
-    static final String PROPERTIES_FILE = "pseudonymize.properties";
+    static final String PROPERTIES_FILE = "pseudonymize-specific.properties";
 
     @BeforeEach
     void initClusterConfigs(ClusterConfig clusterConfig) {
