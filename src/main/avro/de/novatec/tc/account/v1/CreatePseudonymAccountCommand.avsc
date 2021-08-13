@@ -1,0 +1,19 @@
+{
+  "namespace": "de.novatec.tc.account.v1",
+  "name": "CreatePseudonymAccountCommand",
+  "type": "record",
+  "fields": [
+    {
+      "name" : "eventId",
+      "type": {"type": "string", "logicalType": "uuid"}
+    },
+    {
+      "name": "eventTime",
+      "type": {"type": "long", "logicalType": "timestamp-micros"}
+    },
+    {
+      "name": "account",
+      "type": "de.novatec.tc.account.v1.Account"
+    }
+  ]
+}

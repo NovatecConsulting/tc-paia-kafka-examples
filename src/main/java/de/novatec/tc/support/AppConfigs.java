@@ -160,6 +160,13 @@ public class AppConfigs {
         return ofNullable(configs.get(format("%s.topic.replication.factor", configName))).map(this::asStringOrNull).map(Short::valueOf);
     }
 
+    public Map<String, String> topicConfigs(final String configName) {
+        return withPrefix(format("%s.topic.configs", configName))
+                .createMap().entrySet().stream()
+                    .map(entry -> Pair.of(entry.getKey(), entry.getValue() == null ? "" : String.valueOf(entry.getValue())))
+                    .collect(toMap(Pair::getKey, Pair::getValue));
+    }
+
     public Set<String> topicNames() {
         return topicNames(findTopicConfigNames());
     }
@@ -210,7 +217,7 @@ public class AppConfigs {
         final String topicName = topicName(configName);
         final Optional<Integer> partitions = topicPartitions(configName);
         final Optional<Short> replicationFactor = topicReplicationFactor(configName);
-        return new NewTopic(topicName, partitions, replicationFactor);
+        return new NewTopic(topicName, partitions, replicationFactor).configs(topicConfigs(configName));
     }
 
     private Set<String> findTopicConfigNames() {
