@@ -12,7 +12,7 @@ group 'de.novatec.tc'
 version '0.1-SNAPSHOT'
 
 ext {
-    minJavaVersion = "16"
+    minJavaVersion = "17"
 }
 
 dependencies {

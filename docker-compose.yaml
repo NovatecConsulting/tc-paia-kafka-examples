@@ -8,7 +8,7 @@ version: '2.4'
 services:
 
   kafka:
-    image: ueisele/apache-kafka-server:2.8.0
+    image: ueisele/apache-kafka-server:3.0.0
     restart: always
     network_mode: host
     volumes:
@@ -39,7 +39,7 @@ services:
   # Confluent Schema Registry (CP)                            #
   #############################################################
   schema-registry:
-    image: confluentinc/cp-schema-registry:6.2.0
+    image: confluentinc/cp-schema-registry:6.2.1
     restart: always
     network_mode: host
     # https://docs.confluent.io/current/schema-registry/installation/config.html
