@@ -6,7 +6,7 @@ ext {
 versions += [
     scala: "2.13",
     kafka: "3.0.0",
-    confluent: "7.0.0-SNAPSHOT",
+    confluent: "7.0.1",
     avro: "1.10.2",
     commonsLang: "3.12.0",
     awaitility: "4.1.0",
